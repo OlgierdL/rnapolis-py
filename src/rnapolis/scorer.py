@@ -226,7 +226,7 @@ def monte_carlo_mad_test(data, observed_mad, use_full_circle, n_simulations):
     return count / n_simulations
 
 
-def compute_score(metrics):
+def compute_score(metrics, wf, wc, wu, ws):
     """Compute a composite similarity score from circular statistics.
 
     Combines three weighted sub-scores:
@@ -245,11 +245,6 @@ def compute_score(metrics):
     Returns:
         Similarity score in [0, 1], where 1.0 means identical structures.
     """
-    wf = WEIGHTS_FIT
-    wc = WEIGHTS_CONCENTRATION
-    wu = WEIGHTS_UNIFORMITY
-    ws = WEIGHTS_COMPOSITE
-
     fit = wf[0] * max(0, 1 - metrics["mcq"] / MCQ_NORMALIZATION) + wf[1] * max(
         0, 1 - metrics["medcq"] / MCQ_NORMALIZATION
     )
@@ -432,8 +427,8 @@ def _compute_statistics(signed_diffs, unsigned_diffs, n_bootstrap):
         p_wilcoxon_dmcd, p_watson_dmcd, p_watson_dmcq = 0, 0, 0
     else:
         p_wilcoxon_dmcd = scipy.stats.wilcoxon(signed_diffs).pvalue
-        p_watson_dmcd = hypothesis.watson_test(signed_diffs_arr).pval
-        p_watson_dmcq = hypothesis.watson_test(doubled_unsigned_arr).pval
+        _, p_watson_dmcd = hypothesis.watson_test(signed_diffs_arr)
+        _, p_watson_dmcq = hypothesis.watson_test(doubled_unsigned_arr)
 
     return {
         "mcq": mcq,
@@ -471,7 +466,8 @@ def _compute_statistics(signed_diffs, unsigned_diffs, n_bootstrap):
 
 
 def evaluate_similarity(
-    target_path, model_path, n_bootstrap=10000, visualize_on=False, output_dir="."
+    target_path, model_path, n_bootstrap=10000, visualize_on=False, output_dir=".", weights_fit = WEIGHTS_FIT,
+    weights_conecntration = WEIGHTS_CONCENTRATION, weights_uniformity = WEIGHTS_UNIFORMITY, weights_composite = WEIGHTS_COMPOSITE
 ):
     """Evaluate the similarity between two RNA structures.
 
@@ -507,7 +503,7 @@ def evaluate_similarity(
         )
 
     results = _compute_statistics(signed_diffs, unsigned_diffs, n_bootstrap)
-    results["score"] = compute_score(results)
+    results["score"] = compute_score(results, weights_fit, weights_conecntration, weights_uniformity, weights_composite)
 
     return results
 
